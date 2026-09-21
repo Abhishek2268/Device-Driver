@@ -1,45 +1,59 @@
-/*Register Summary
-       Bit	Register	Function
-       INTEDG	OPTION_REG	Selects rising/falling edge for RB0 interrupt
-       INTF	INTCON	External interrupt flag
-       INTE	INTCON	Enables RB0 external interrupt
-       PEIE	INTCON	Enables peripheral interrupts
-       GIE	INTCON	Enables all interrupts globally
-*/
-#include "interrupt.h"
+#include <xc.h>
+#include "adc.h"
 
-void Interrupt_Init(void)
+
+
+// CONFIG1
+#pragma config FEXTOSC = OFF
+#pragma config RSTOSC = HFINTOSC_32MHZ
+#pragma config CLKOUTEN = OFF
+#pragma config VDDAR = HI
+
+// CONFIG2
+#pragma config MCLRE = EXTMCLR
+#pragma config PWRTS = PWRT_OFF
+#pragma config WDTE = OFF
+#pragma config BOREN = OFF
+#pragma config BORV = LO
+#pragma config PPS1WAY = ON
+#pragma config STVREN = ON
+
+// CONFIG4
+#pragma config BBSIZE = BB512
+#pragma config BBEN = OFF
+#pragma config SAFEN = OFF
+#pragma config WRTAPP = OFF
+#pragma config WRTB = OFF
+#pragma config WRTC = OFF
+#pragma config WRTSAF = OFF
+#pragma config LVP = OFF
+
+// CONFIG5
+#pragma config CP = OFF
+#define _XTAL_FREQ 32000000UL
+void main(void)
 {
-  TRISB0 = 1;  // RB0 as input
+    unsigned int adc_value;
 
-OPTION_REGBITS.INTEDG = 1;
-           // INTEDG (Interrupt Edge Select bit) selects which edge triggers the external interrupt.
-          // 1 = Rising edge (Low → High)                                             
-          // 0 = Falling edge (High → Low)
-INTF = 0;
-          //INTF is the External Interrupt Flag in the INTCON register.
-          //It must be cleared before enabling the interrupt.
-          //When an interrupt occurs on RB0, the hardware sets INTF = 1.
-INTE =1;
-          //INTE is the External Interrupt Enable bit.
-          //1 = Enable the RB0/INT external interrupt.
-          //0 = Disable the external interrupt.
-PEIE = 0;
-          //PEIE is the Peripheral Interrupt Enable bit.
-          //It is required only for peripheral interrupts (ADC, UART, Timer1, CCP, etc.).
-          //Since the RB0 external interrupt is not a peripheral interrupt, PEIE is not needed and can remain 0.
-GIE = 1;
-           //GIE is the Global Interrupt Enable bit.
-           //1 = Enables all interrupts that have been individually enabled.
-           //If GIE = 0, no interrupts will be serviced, even if INTE = 1.
-}   
+    // RA0 = LED Output
+    TRISAbits.TRISA0 = 0;
+    LATAbits.LATA0 = 0;
 
-// Interrupt Service Routine
-void __interrupt() ISR(void)
-{
-    if(INTF)
+    ADC_Init();
+
+    while(1)
     {
-        PORTD ^= 0xFF;   // Toggle PORTD
-        INTF = 0;        // Clear Interrupt Flag
+        adc_value = ADC_Read();
+
+        if(adc_value >= 512)
+        {
+            LATAbits.LATA0 = 1;
+        }
+        else
+        {
+            LATAbits.LATA0 = 0;
+        }
+
+        __delay_ms(100);
     }
 }
